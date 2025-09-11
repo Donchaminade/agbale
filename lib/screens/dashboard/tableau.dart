@@ -1,3 +1,4 @@
+import 'package:abgbale/screens/navbar/bottomnavbar.dart';
 import 'package:abgbale/screens/notes/notes_todos_screen.dart';
 import 'package:abgbale/screens/contacts/contacts_screen.dart';
 import 'package:abgbale/models/user.dart';
@@ -83,13 +84,21 @@ class _TableauScreenState extends State<TableauScreen> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Welcome, ${user.fullName}!',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                    Expanded(
+                      child: Text(
+                        'Welcome, ${user.fullName}!',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     ),
-                    Text(
-                      '${user.email}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                    Expanded(
+                      child: Text(
+                        '${user.email}',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     ),
                   ],
                 ),
@@ -185,8 +194,12 @@ class _TableauScreenState extends State<TableauScreen> {
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
                       children: [
                         _buildQuickActionButton(context, 'Add Contact', Icons.person_add, () {
                           // Navigate to add contact or show dialog
@@ -248,18 +261,24 @@ class _TableauScreenState extends State<TableauScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Icon(icon, size: 36, color: Colors.white),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white70),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      value,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white70),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -283,8 +302,8 @@ class _TableauScreenState extends State<TableauScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(activity, style: Theme.of(context).textTheme.bodyLarge),
-                  Text(time, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                  Text(activity, style: Theme.of(context).textTheme.bodyLarge, overflow: TextOverflow.ellipsis, maxLines: 1),
+                  Text(time, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey), overflow: TextOverflow.ellipsis, maxLines: 1),
                 ],
               ),
             ),
@@ -295,16 +314,30 @@ class _TableauScreenState extends State<TableauScreen> {
   }
 
   Widget _buildQuickActionButton(BuildContext context, String title, IconData icon, VoidCallback onPressed) {
-    return Column(
-      children: [
-        FloatingActionButton(
-          heroTag: title, // Unique tag for each button
-          onPressed: onPressed,
-          child: Icon(icon),
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.all(12.0), // Reduced padding
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary), // Reduced icon size
+              const SizedBox(height: 4), // Reduced SizedBox
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleSmall,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 8),
-        Text(title, style: Theme.of(context).textTheme.bodySmall),
-      ],
+      ),
     );
   }
 
@@ -312,7 +345,13 @@ class _TableauScreenState extends State<TableauScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard'),
+        title: CircleAvatar(
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(4.0), // Add some padding inside the circle
+            child: Image.asset('assets/logo.png', height: 30),
+          ),
+        ),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -375,23 +414,9 @@ class _TableauScreenState extends State<TableauScreen> {
         ],
       ),
       body: _buildBody(),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.contacts_outlined),
-            label: 'Contacts',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.note_alt_outlined),
-            label: 'Notes',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+      bottomNavigationBar: BottomNavBar(
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onItemTapped,
       ),
     );
   }
