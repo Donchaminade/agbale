@@ -105,7 +105,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             backgroundColor: Theme.of(context).colorScheme.primary,
                             foregroundColor: Theme.of(context).colorScheme.onPrimary,
                           ),
-                          child: const Text('Commencer',style: TextStyle(fontSize: 13, color: Colors.white),textAlign: TextAlign.center),
+                          child: const Text('Acceder',style: TextStyle(fontSize: 13, color: Colors.white),textAlign: TextAlign.center),
                         ),
                 ],
               ),
@@ -160,7 +160,7 @@ class OnboardingPage extends StatelessWidget {
         ),
         Positioned.fill(
           child: Container(
-            color: Colors.black.withOpacity(0.8), // Semi-transparent black overlay
+            color: Colors.black.withOpacity(0.5), // Semi-transparent black overlay
           ),
         ),
         Column(

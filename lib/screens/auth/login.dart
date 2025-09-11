@@ -13,7 +13,8 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final ApiService _apiService = ApiService();
-  final _formKey = GlobalKey<FormState>();
+  final _loginFormKey = GlobalKey<FormState>();
+  final _registerFormKey = GlobalKey<FormState>();
 
   bool _isLogin = true;
   bool _isLoading = false;
@@ -25,7 +26,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _confirmPasswordController = TextEditingController();
 
   void _submitForm() async {
-    if (_formKey.currentState!.validate()) {
+    final formKey = _isLogin ? _loginFormKey : _registerFormKey;
+    if (formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
         _errorMessage = '';
@@ -110,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(24.0),
                       child: Form(
-                        key: _formKey,
+                        key: _isLogin ? _loginFormKey : _registerFormKey,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -122,18 +124,28 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const Icon(Icons.account_circle, size: 80), // Fallback icon
                             ),
                             const SizedBox(height: 20),
-                            if (!_isLogin)
-                              TextFormField(
-                                controller: _fullNameController,
-                                decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person_outline)),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your full name';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            if (!_isLogin) const SizedBox(height: 16),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              transitionBuilder: (Widget child, Animation<double> animation) {
+                                return FadeTransition(opacity: animation, child: child);
+                              },
+                              child: _isLogin ? const SizedBox.shrink() : 
+                                Column(
+                                  children: [
+                                    TextFormField(
+                                      controller: _fullNameController,
+                                      decoration: const InputDecoration(labelText: 'Full Name', prefixIcon: Icon(Icons.person_outline)),
+                                      validator: (value) {
+                                        if (!_isLogin && (value == null || value.isEmpty)) {
+                                          return 'Please enter your full name';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                    const SizedBox(height: 16),
+                                  ],
+                                ),
+                            ),
                             TextFormField(
                               controller: _emailController,
                               decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
@@ -157,22 +169,32 @@ class _LoginScreenState extends State<LoginScreen> {
                                 return null;
                               },
                             ),
-                            if (!_isLogin) const SizedBox(height: 16),
-                            if (!_isLogin)
-                              TextFormField(
-                                controller: _confirmPasswordController,
-                                decoration: const InputDecoration(labelText: 'Confirm Password', prefixIcon: Icon(Icons.lock_outline)),
-                                obscureText: true,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please confirm your password';
-                                  }
-                                  if (value != _passwordController.text) {
-                                    return 'Passwords do not match';
-                                  }
-                                  return null;
-                                },
-                              ),
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              transitionBuilder: (Widget child, Animation<double> animation) {
+                                return FadeTransition(opacity: animation, child: child);
+                              },
+                              child: _isLogin ? const SizedBox.shrink() : 
+                                Column(
+                                  children: [
+                                    const SizedBox(height: 16),
+                                    TextFormField(
+                                      controller: _confirmPasswordController,
+                                      decoration: const InputDecoration(labelText: 'Confirm Password', prefixIcon: Icon(Icons.lock_outline)),
+                                      obscureText: true,
+                                      validator: (value) {
+                                        if (!_isLogin && (value == null || value.isEmpty)) {
+                                          return 'Please confirm your password';
+                                        }
+                                        if (!_isLogin && value != _passwordController.text) {
+                                          return 'Passwords do not match';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ],
+                                ),
+                            ),
                             const SizedBox(height: 24),
                             if (_isLoading)
                               const Center(child: CircularProgressIndicator())

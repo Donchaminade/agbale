@@ -30,6 +30,8 @@ class MyApp extends StatelessWidget {
           primary: primaryColor,
           secondary: secondaryColor,
           brightness: Brightness.light,
+          error: Colors.redAccent,
+          onError: Colors.white,
         ),
         scaffoldBackgroundColor: Colors.grey[100],
         appBarTheme: const AppBarTheme(
