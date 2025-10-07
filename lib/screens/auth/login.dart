@@ -1,3 +1,4 @@
+import 'package:abgbale/screens/auth/otp_screen.dart';
 import 'package:abgbale/services/api_service.dart';
 import 'package:abgbale/widgets/auth_background_clipper.dart';
 import 'package:abgbale/widgets/full_screen_loader.dart';
@@ -58,9 +59,19 @@ class _LoginScreenState extends State<LoginScreen> {
         if (mounted) {
           if (result['success']) {
             if (_isLogin) {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => const TableauScreen()),
-              );
+              // Request OTP sending
+              final otpResult = await _apiService.requestOtp(_emailController.text);
+              if (mounted) {
+                if (otpResult['success']) {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (context) => OtpScreen(email: _emailController.text)),
+                  );
+                } else {
+                  setState(() {
+                    _errorMessage = otpResult['message'] ?? 'Could not send OTP.';
+                  });
+                }
+              }
             } else {
               setState(() {
                 _isLogin = true;

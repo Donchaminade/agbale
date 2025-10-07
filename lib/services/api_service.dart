@@ -7,10 +7,15 @@ import 'package:abgbale/models/note_todo.dart';
 import 'package:abgbale/utils/token_manager.dart'; // Import TokenManager
 
 class ApiService {
-  static const String _baseUrl = 'http://localhost:8080/agbale_api_php'; // Your PHP API base URL
+  static const String _baseUrl =
+      'http://192.168.1.86/agbale_api_php'; // Your PHP API base URL
 
   // --- Authentication ---
-  Future<Map<String, dynamic>> registerUser(String fullName, String email, String password) async {
+  Future<Map<String, dynamic>> registerUser(
+    String fullName,
+    String email,
+    String password,
+  ) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/register'),
       headers: <String, String>{
@@ -44,7 +49,9 @@ class ApiService {
         String? rawCookie = response.headers['set-cookie'];
         if (rawCookie != null) {
           int index = rawCookie.indexOf(';');
-          String cookie = (index == -1) ? rawCookie : rawCookie.substring(0, index);
+          String cookie = (index == -1)
+              ? rawCookie
+              : rawCookie.substring(0, index);
           await TokenManager.saveToken(cookie);
           if (responseBody['user_id'] != null) {
             await TokenManager.saveUserId(responseBody['user_id']);
@@ -54,12 +61,16 @@ class ApiService {
       }
       return responseBody;
     } else {
-      return {'success': false, 'message': 'Failed to login: ${response.statusCode}'};
+      return {
+        'success': false,
+        'message': 'Failed to login: ${response.statusCode}',
+      };
     }
   }
 
   Future<Map<String, dynamic>> logoutUser() async {
-    final String? cookie = await TokenManager.getToken(); // Get the stored session cookie
+    final String? cookie =
+        await TokenManager.getToken(); // Get the stored session cookie
     if (cookie == null) {
       return {'success': true, 'message': 'Already logged out (no token).'};
     }
@@ -80,7 +91,10 @@ class ApiService {
       }
       return responseBody;
     } else {
-      return {'success': false, 'message': 'Failed to logout: ${response.statusCode}'};
+      return {
+        'success': false,
+        'message': 'Failed to logout: ${response.statusCode}',
+      };
     }
   }
 
@@ -105,6 +119,33 @@ class ApiService {
     return null;
   }
 
+  // --- OTP Simulation ---
+  Future<Map<String, dynamic>> requestOtp(String email) async {
+    // This simulates making a request to your backend to send an OTP.
+    // In a real app, this would trigger an email or SMS.
+    print('Requesting OTP for $email (simulated).');
+    await Future.delayed(
+      const Duration(seconds: 1),
+    ); // Simulate network latency
+    return {'success': true, 'message': 'OTP sent successfully (simulated).'};
+  }
+
+  Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+    // This simulates verifying the OTP with your backend.
+    print('Verifying OTP $otp for $email (simulated).');
+    await Future.delayed(
+      const Duration(seconds: 1),
+    ); // Simulate network latency
+    if (otp == '123456') {
+      return {
+        'success': true,
+        'message': 'OTP verified successfully (simulated).',
+      };
+    } else {
+      return {'success': false, 'message': 'Invalid OTP (simulated).'};
+    }
+  }
+
   // --- Contacts ---
   Future<List<Contact>> fetchContacts() async {
     final String? cookie = await TokenManager.getToken();
@@ -119,11 +160,23 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      final Map<String, dynamic> responseBody = jsonDecode(response.body);
-      if (responseBody['success'] && responseBody['contacts'] != null) {
-        return (responseBody['contacts'] as List)
-            .map((json) => Contact.fromJson(json))
-            .toList();
+      print('API Response Body for fetchContacts: ${response.body}'); // Debug print
+      try {
+        final cleanJson = _extractJson(response.body);
+        print('Cleaned JSON for fetchContacts: $cleanJson'); // Debug print
+        final Map<String, dynamic> responseBody = jsonDecode(cleanJson);
+        print('Decoded Response Body for fetchContacts: $responseBody'); // Debug print
+        if (responseBody['success'] && responseBody['contacts'] != null) {
+          final contacts = (responseBody['contacts'] as List)
+              .map((json) => Contact.fromJson(json))
+              .toList();
+          print('Fetched contacts count: ${contacts.length}'); // Debug print
+          return contacts;
+        }
+      } catch (e) {
+        print('Error decoding JSON for fetchContacts: $e');
+        // Return empty list if JSON is malformed
+        return [];
       }
     }
     return [];
@@ -133,29 +186,40 @@ class ApiService {
     final String? cookie = await TokenManager.getToken();
     if (cookie == null) return null;
 
+    final requestBody = jsonEncode(contact.toJson());
+    print('Create Contact Body: $requestBody'); // Debug print
+
     final response = await http.post(
       Uri.parse('$_baseUrl/contacts'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
         'Cookie': cookie,
       },
-      body: jsonEncode(contact.toJson()),
+      body: requestBody,
     );
 
+    print('Create Contact Response: ${response.statusCode} ${response.body}'); // Debug print
+
     if (response.statusCode == 200) {
-      final Map<String, dynamic> responseBody = jsonDecode(response.body);
-      if (responseBody['success'] && responseBody['id_contact'] != null) {
-        // For simplicity, we'll return a dummy contact with the new ID
-        // In a real app, you might refetch or get more details from the API response
-        return Contact(
-          id: responseBody['id_contact'],
-          userId: await TokenManager.getUserId() ?? 0,
-          contactName: contact.contactName,
-          importanceNote: contact.importanceNote,
-          dateAdded: DateTime.now(),
-          email: contact.email,
-          number: contact.number,
-        );
+      try {
+        final cleanJson = _extractJson(response.body);
+        final Map<String, dynamic> responseBody = jsonDecode(cleanJson);
+        if (responseBody['success'] && responseBody['id_contact'] != null) {
+          // For simplicity, we'll return a dummy contact with the new ID
+          // In a real app, you might refetch or get more details from the API response
+          return Contact(
+            id: responseBody['id_contact'],
+            userId: await TokenManager.getUserId() ?? 0,
+            contactName: contact.contactName,
+            importanceNote: contact.importanceNote,
+            dateAdded: DateTime.now(),
+            email: contact.email,
+            number: contact.number,
+          );
+        }
+      } catch (e) {
+        print('Error decoding JSON for createContact: $e');
+        return null;
       }
     }
     return null;
@@ -165,16 +229,30 @@ class ApiService {
     final String? cookie = await TokenManager.getToken();
     if (cookie == null) return false;
 
+    final requestBody = jsonEncode(contact.toJson());
+    print('Update Contact Body: $requestBody'); // Debug print
+
     final response = await http.put(
       Uri.parse('$_baseUrl/contacts/${contact.id}'),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
         'Cookie': cookie,
       },
-      body: jsonEncode(contact.toJson()),
+      body: requestBody,
     );
 
-    return response.statusCode == 200 && jsonDecode(response.body)['success'];
+    print('Update Contact Response: ${response.statusCode} ${response.body}'); // Debug print
+
+    if (response.statusCode == 200) {
+      try {
+        final cleanJson = _extractJson(response.body);
+        return jsonDecode(cleanJson)['success'];
+      } catch (e) {
+        print('Error decoding JSON for updateContact: $e');
+        return false;
+      }
+    }
+    return false;
   }
 
   Future<bool> deleteContact(int contactId) async {
@@ -189,7 +267,18 @@ class ApiService {
       },
     );
 
-    return response.statusCode == 200 && jsonDecode(response.body)['success'];
+    print('Delete Contact Response: ${response.statusCode} ${response.body}'); // Debug print
+
+    if (response.statusCode == 200) {
+      try {
+        final cleanJson = _extractJson(response.body);
+        return jsonDecode(cleanJson)['success'];
+      } catch (e) {
+        print('Error decoding JSON for deleteContact: $e');
+        return false;
+      }
+    }
+    return false;
   }
 
   // --- Social Medias ---
@@ -288,11 +377,23 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      final Map<String, dynamic> responseBody = jsonDecode(response.body);
-      if (responseBody['success'] && responseBody['notes_todos'] != null) {
-        return (responseBody['notes_todos'] as List)
-            .map((json) => NoteTodo.fromJson(json))
-            .toList();
+      print('API Response Body for fetchNotesTodos: ${response.body}'); // Debug print
+      try {
+        final cleanJson = _extractJson(response.body);
+        print('Cleaned JSON for fetchNotesTodos: $cleanJson'); // Debug print
+        final Map<String, dynamic> responseBody = jsonDecode(cleanJson);
+        print('Decoded Response Body for fetchNotesTodos: $responseBody'); // Debug print
+        if (responseBody['success'] && responseBody['notes_todos'] != null) {
+          final notesTodos = (responseBody['notes_todos'] as List)
+              .map((json) => NoteTodo.fromJson(json))
+              .toList();
+          print('Fetched notes/todos count: ${notesTodos.length}'); // Debug print
+          return notesTodos;
+        }
+      } catch (e) {
+        print('Error decoding JSON for fetchNotesTodos: $e');
+        // Return empty list if JSON is malformed
+        return [];
       }
     }
     return [];
@@ -316,7 +417,9 @@ class ApiService {
       if (responseBody['success'] && responseBody['id_note'] != null) {
         return NoteTodo(
           id: responseBody['id_note'],
-          userId: await TokenManager.getUserId() ?? 0, // Get userId from TokenManager
+          userId:
+              await TokenManager.getUserId() ??
+              0, // Get userId from TokenManager
           title: noteTodo.title,
           type: noteTodo.type,
           status: noteTodo.status,
@@ -358,5 +461,67 @@ class ApiService {
     );
 
     return response.statusCode == 200 && jsonDecode(response.body)['success'];
+  }
+
+  // --- Dashboard ---
+  Future<Map<String, dynamic>> getDashboardData() async {
+    // Use Future.wait to fetch user data and stats in parallel for efficiency
+    final results = await Future.wait([
+      fetchUserData(),
+      getDashboardStats(),
+    ]);
+
+    final user = results[0] as User?;
+    final stats = results[1] as Map<String, int>;
+
+    if (user == null) {
+      print('User data is null in getDashboardData.'); // Debug print
+      throw Exception('Failed to load user data for dashboard.');
+    }
+
+    print('User data in getDashboardData: ${user.toJson()}'); // Debug print
+    print('Stats data in getDashboardData: $stats'); // Debug print
+
+    return {
+      'user': user,
+      'stats': stats,
+    };
+  }
+
+  Future<Map<String, int>> getDashboardStats() async {
+    // In a real-world scenario, the backend should provide a dedicated endpoint for this.
+    // Here, we simulate it by fetching all items and getting their length.
+    try {
+      final contacts = await fetchContacts();
+      final notes = await fetchNotesTodos();
+
+      // You can add more stats here as needed
+      final pendingTodos = notes.where((item) => item.type == 'todo' && item.status != 'terminé').length;
+
+      return {
+        'totalContacts': contacts.length,
+        'activeNotes': notes.length,
+        'pendingTodos': pendingTodos,
+      };
+    } catch (e) {
+      print('Error fetching dashboard stats: $e');
+      return {
+        'totalContacts': 0,
+        'activeNotes': 0,
+        'pendingTodos': 0,
+      };
+    }
+  }
+
+  // Helper function to extract valid JSON from a malformed response
+  String _extractJson(String malformedJson) {
+    final startIndex = malformedJson.indexOf('{');
+    final endIndex = malformedJson.lastIndexOf('}');
+
+    if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+      return malformedJson.substring(startIndex, endIndex + 1);
+    }
+    // If valid JSON cannot be extracted, return an empty JSON object or throw an error
+    return '{}'; 
   }
 }

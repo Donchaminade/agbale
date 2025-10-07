@@ -19,4 +19,13 @@ class User {
       creationDate: DateTime.parse(json['date_creation']),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id_utilisateur': id,
+      'nom_complet': fullName,
+      'email': email,
+      'date_creation': creationDate.toIso8601String(),
+    };
+  }
 }

@@ -1,3 +1,4 @@
+import 'package:abgbale/screens/contacts/add_edit_contact_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:abgbale/models/contact.dart';
 import 'package:abgbale/services/api_service.dart';
@@ -9,19 +10,41 @@ class ContactsScreen extends StatefulWidget {
   State<ContactsScreen> createState() => _ContactsScreenState();
 }
 
-class _ContactsScreenState extends State<ContactsScreen> {
+class _ContactsScreenState extends State<ContactsScreen> with WidgetsBindingObserver {
   final ApiService _apiService = ApiService();
-  List<Contact> _contacts = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  List<Contact> _allContacts = [];
+  List<Contact> _displayedContacts = [];
   bool _isLoading = true;
+  bool _isSearching = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchContacts();
+    _searchController.addListener(_filterContacts);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      print('App resumed, refreshing contacts list...');
+      _fetchContacts();
+    }
   }
 
   Future<void> _fetchContacts() async {
+    print('Fetching contacts data...');
     setState(() {
       _isLoading = true;
       _error = null;
@@ -29,7 +52,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
     try {
       final contacts = await _apiService.fetchContacts();
       setState(() {
-        _contacts = contacts;
+        _allContacts = contacts;
+        _displayedContacts = contacts;
       });
     } catch (e) {
       setState(() {
@@ -42,57 +66,35 @@ class _ContactsScreenState extends State<ContactsScreen> {
     }
   }
 
+  void _filterContacts() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _displayedContacts = _allContacts.where((contact) {
+        final nameMatch = contact.contactName.toLowerCase().contains(query);
+        final emailMatch = contact.email?.toLowerCase().contains(query) ?? false;
+        final numberMatch = contact.number?.toLowerCase().contains(query) ?? false;
+        return nameMatch || emailMatch || numberMatch;
+      }).toList();
+    });
+  }
+
   Future<void> _addContact() async {
-    final newContact = await showDialog<Contact>(
-      context: context,
-      builder: (context) => ContactFormDialog(),
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (context) => const AddEditContactScreen()),
     );
 
-    if (newContact != null) {
-      try {
-        final createdContact = await _apiService.createContact(newContact);
-        if (createdContact != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Contact added successfully!')),
-          );
-          _fetchContacts(); // Refresh the list
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to add contact.')),
-          );
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding contact: ${e.toString()}')),
-        );
-      }
+    if (result == true) {
+      _fetchContacts(); // Refresh the list if a contact was added
     }
   }
 
   Future<void> _editContact(Contact contact) async {
-    final updatedContact = await showDialog<Contact>(
-      context: context,
-      builder: (context) => ContactFormDialog(contact: contact),
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (context) => AddEditContactScreen(contact: contact)),
     );
 
-    if (updatedContact != null) {
-      try {
-        final success = await _apiService.updateContact(updatedContact);
-        if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Contact updated successfully!')),
-          );
-          _fetchContacts(); // Refresh the list
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to update contact.')),
-          );
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating contact: ${e.toString()}')),
-        );
-      }
+    if (result == true) {
+      _fetchContacts(); // Refresh the list if a contact was edited
     }
   }
 
@@ -130,179 +132,127 @@ class _ContactsScreenState extends State<ContactsScreen> {
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting contact: ${e.toString()}')),
+          SnackBar(content: Text('Error deleting contact: ${e.toString()}'),
+          ),
         );
       }
     }
   }
 
+  AppBar _buildAppBar() {
+    if (_isSearching) {
+      return AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            setState(() {
+              _isSearching = false;
+              _searchController.clear();
+            });
+          },
+        ),
+        title: TextField(
+          controller: _searchController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Search contacts...',
+            border: InputBorder.none,
+          ),
+          style: const TextStyle(color: Colors.white, fontSize: 18),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.clear),
+            onPressed: () {
+              _searchController.clear();
+            },
+          ),
+        ],
+      );
+    }
+
+    return AppBar(
+      title: const Text('Contacts'),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: () {
+            setState(() {
+              _isSearching = true;
+            });
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: _addContact,
+          tooltip: 'Add New Contact',
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Contacts'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _addContact,
-            tooltip: 'Add New Contact',
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
               ? Center(child: Text(_error!))
-              : _contacts.isEmpty
+              : _allContacts.isEmpty
                   ? const Center(child: Text('No contacts found. Add a new one!'))
-                  : ListView.builder(
-                      itemCount: _contacts.length,
-                      itemBuilder: (context, index) {
-                        final contact = _contacts[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                          child: ListTile(
-                            title: Text(contact.contactName),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (contact.number != null && contact.number!.isNotEmpty)
-                                  Text('Phone: ${contact.number}'),
-                                if (contact.email != null && contact.email!.isNotEmpty)
-                                  Text('Email: ${contact.email}'),
-                                Text('Importance: ${contact.importanceNote}'),
-                                Text('Added: ${contact.dateAdded.toLocal().toString().split(' ')[0]}'),
-                              ],
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit),
-                                  onPressed: () => _editContact(contact),
-                                  tooltip: 'Edit Contact',
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete),
-                                  onPressed: () => _deleteContact(contact.id),
-                                  tooltip: 'Delete Contact',
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-    );
-  }
-}
-
-class ContactFormDialog extends StatefulWidget {
-  final Contact? contact;
-
-  const ContactFormDialog({super.key, this.contact});
-
-  @override
-  State<ContactFormDialog> createState() => _ContactFormDialogState();
-}
-
-class _ContactFormDialogState extends State<ContactFormDialog> {
-  final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameController;
-  late TextEditingController _numberController;
-  late TextEditingController _emailController;
-  String _selectedImportance = 'moyenne';
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(text: widget.contact?.contactName ?? '');
-    _numberController = TextEditingController(text: widget.contact?.number ?? '');
-    _emailController = TextEditingController(text: widget.contact?.email ?? '');
-    _selectedImportance = widget.contact?.importanceNote ?? 'moyenne';
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _numberController.dispose();
-    _emailController.dispose();
-    super.dispose();
-  }
-
-  void _submitForm() {
-    if (_formKey.currentState!.validate()) {
-      final newContact = Contact(
-        id: widget.contact?.id ?? 0, // ID will be ignored for new contacts by API
-        userId: widget.contact?.userId ?? 0, // userId will be ignored for new contacts by API
-        contactName: _nameController.text,
-        number: _numberController.text.isEmpty ? null : _numberController.text,
-        email: _emailController.text.isEmpty ? null : _emailController.text,
-        importanceNote: _selectedImportance,
-        dateAdded: widget.contact?.dateAdded ?? DateTime.now(),
-      );
-      Navigator.of(context).pop(newContact);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.contact == null ? 'Add New Contact' : 'Edit Contact'),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Contact Name'),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a contact name';
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: _numberController,
-                decoration: const InputDecoration(labelText: 'Phone Number (Optional)'),
-                keyboardType: TextInputType.phone,
-              ),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email (Optional)'),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              DropdownButtonFormField<String>(
-                value: _selectedImportance,
-                decoration: const InputDecoration(labelText: 'Importance Note'),
-                items: const [
-                  DropdownMenuItem(value: 'faible', child: Text('Faible')),
-                  DropdownMenuItem(value: 'moyenne', child: Text('Moyenne')),
-                  DropdownMenuItem(value: 'elevee', child: Text('Élevée')),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedImportance = value!;
-                  });
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _submitForm,
-          child: Text(widget.contact == null ? 'Add' : 'Save'),
-        ),
-      ],
+                  : _displayedContacts.isEmpty
+                      ? const Center(child: Text('No contacts match your search.'))
+                      : ListView.builder(
+                          padding: const EdgeInsets.only(top: 8),
+                          itemCount: _displayedContacts.length,
+                          itemBuilder: (context, index) {
+                            final contact = _displayedContacts[index];
+                            final initial = contact.contactName.isNotEmpty ? contact.contactName[0].toUpperCase() : '?';
+                            return ListTile(
+                              leading: CircleAvatar(
+                                child: Text(initial),
+                              ),
+                              title: Text(contact.contactName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (contact.email != null && contact.email!.isNotEmpty)
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.email_outlined, size: 14, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Expanded(child: Text(contact.email!, style: const TextStyle(color: Colors.grey))),
+                                      ],
+                                    ),
+                                  if (contact.number != null && contact.number!.isNotEmpty)
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.phone_outlined, size: 14, color: Colors.grey),
+                                        const SizedBox(width: 4),
+                                        Text(contact.number!, style: const TextStyle(color: Colors.grey)),
+                                      ],
+                                    ),
+                                ],
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.grey),
+                                    onPressed: () => _editContact(contact),
+                                    tooltip: 'Edit Contact',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.redAccent),
+                                    onPressed: () => _deleteContact(contact.id),
+                                    tooltip: 'Delete Contact',
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
     );
   }
 }
