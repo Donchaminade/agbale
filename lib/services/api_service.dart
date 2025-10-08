@@ -9,7 +9,7 @@ import 'package:abgbale/utils/token_manager.dart'; // Import TokenManager
 
 class ApiService {
   static const String _baseUrl =
-      'http://192.168.1.86/agbale_api_php'; // Your PHP API base URL
+      'http://192.168.137.1/agbale_api_php'; // Your PHP API base URL
 
   // --- Authentication ---
   Future<Map<String, dynamic>> registerUser(
