@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false, // Remove debug banner
-      title: 'Abgbale App',
+      title: 'Agbale App',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(

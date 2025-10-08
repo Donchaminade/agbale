@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:abgbale/models/user.dart';
 import 'package:abgbale/models/contact.dart';
+import 'package:abgbale/models/mynet.dart';
 import 'package:abgbale/models/social_media.dart';
 import 'package:abgbale/models/note_todo.dart';
 import 'package:abgbale/utils/token_manager.dart'; // Import TokenManager
@@ -275,6 +276,119 @@ class ApiService {
         return jsonDecode(cleanJson)['success'];
       } catch (e) {
         print('Error decoding JSON for deleteContact: $e');
+        return false;
+      }
+    }
+    return false;
+  }
+
+  // --- MyNets ---
+  Future<List<MyNet>> fetchMyNets() async {
+    final String? cookie = await TokenManager.getToken();
+    if (cookie == null) return [];
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/mynets'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Cookie': cookie,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      try {
+        final String cleanJson = _extractJson(response.body);
+        final Map<String, dynamic> responseBody = jsonDecode(cleanJson);
+
+        if (responseBody['success'] == true && responseBody['mynets'] != null) {
+          final List<dynamic> mynetsData = responseBody['mynets'];
+          final List<MyNet> mynetsList = [];
+          for (final item in mynetsData) {
+            mynetsList.add(MyNet.fromJson(item as Map<String, dynamic>));
+          }
+          return mynetsList;
+        }
+      } catch (e) {
+        print('Error decoding JSON for fetchMyNets: $e');
+        return [];
+      }
+    }
+    return [];
+  }
+
+  Future<MyNet?> createMyNet(MyNet myNet) async {
+    final String? cookie = await TokenManager.getToken();
+    if (cookie == null) return null;
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/mynets'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Cookie': cookie,
+      },
+      body: jsonEncode(myNet.toJson()),
+    );
+
+    if (response.statusCode == 201) {
+      try {
+        final String cleanJson = _extractJson(response.body);
+        final Map<String, dynamic> responseBody = jsonDecode(cleanJson);
+        if (responseBody['success'] == true && responseBody['id_mynet'] != null) {
+          return myNet.copyWith(id: responseBody['id_mynet']);
+        }
+      } catch (e) {
+        print('Error decoding JSON for createMyNet: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
+  Future<bool> updateMyNet(MyNet myNet) async {
+    final String? cookie = await TokenManager.getToken();
+    if (cookie == null) return false;
+
+    final response = await http.put(
+      Uri.parse('$_baseUrl/mynets/${myNet.id}'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Cookie': cookie,
+      },
+      body: jsonEncode(myNet.toJson()),
+    );
+
+    if (response.statusCode == 200) {
+      try {
+        final String cleanJson = _extractJson(response.body);
+        final Map<String, dynamic> responseBody = jsonDecode(cleanJson);
+        return responseBody['success'] ?? false;
+      } catch (e) {
+        print('Error decoding JSON for updateMyNet: $e');
+        return false;
+      }
+    }
+    return false;
+  }
+
+  Future<bool> deleteMyNet(int myNetId) async {
+    final String? cookie = await TokenManager.getToken();
+    if (cookie == null) return false;
+
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/mynets/$myNetId'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Cookie': cookie,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      try {
+        final String cleanJson = _extractJson(response.body);
+        final Map<String, dynamic> responseBody = jsonDecode(cleanJson);
+        return responseBody['success'] ?? false;
+      } catch (e) {
+        print('Error decoding JSON for deleteMyNet: $e');
         return false;
       }
     }

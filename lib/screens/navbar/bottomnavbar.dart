@@ -13,18 +13,19 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 70, // Increased height for better visual
+      height: 60, // Slightly reduced height for a sleeker look
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary, // Yellow background
+        color: Theme.of(context).colorScheme.primary, // Navbar background is primary color (blue)
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20.0),
-          topRight: Radius.circular(20.0),
+          topLeft: Radius.circular(25.0),
+          topRight: Radius.circular(25.0),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 5,
+            color: Colors.black.withOpacity(0.05),
+            spreadRadius: 0,
             blurRadius: 10,
+            offset: const Offset(0, -5), // Subtle shadow upwards
           ),
         ],
       ),
@@ -35,7 +36,7 @@ class BottomNavBar extends StatelessWidget {
             context,
             0,
             Icons.dashboard_outlined,
-            'Dashboard',
+            'Dash',
           ),
           _buildNavItem(
             context,
@@ -49,6 +50,12 @@ class BottomNavBar extends StatelessWidget {
             Icons.note_alt_outlined,
             'Notes',
           ),
+          _buildNavItem(
+            context,
+            3,
+            Icons.vpn_key_outlined,
+            'MyNets',
+          ),
         ],
       ),
     );
@@ -56,31 +63,50 @@ class BottomNavBar extends StatelessWidget {
 
   Widget _buildNavItem(BuildContext context, int index, IconData icon, String label) {
     final bool isSelected = index == selectedIndex;
-    final Color itemColor = isSelected ? Theme.of(context).colorScheme.onPrimary : Colors.white.withOpacity(0.7);
+    final Color primaryColor = Theme.of(context).colorScheme.primary;
 
     return Expanded(
       child: InkWell(
         onTap: () => onItemTapped(index),
+        customBorder: const StadiumBorder(),
+        splashColor: primaryColor.withOpacity(0.2),
+        highlightColor: primaryColor.withOpacity(0.1),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), // Reduced horizontal padding
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white.withOpacity(0.2) : Colors.transparent,
-            borderRadius: BorderRadius.circular(15), // Slightly rounded background for selected item
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(25),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-          child: Column(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: itemColor, size: 28),
-              Text(
-                label,
-                style: TextStyle(color: itemColor, fontSize: 12),
+              Icon(
+                icon,
+                color: isSelected ? primaryColor : Colors.white.withOpacity(0.7),
+                size: 24,
               ),
+              if (isSelected)
+                const SizedBox(width: 8),
+              if (isSelected)
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: primaryColor,
+                    fontSize: 11, // Reduced font size
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
             ],
           ),
         ),
       ),
     );
   }
+
+
+
+
 }

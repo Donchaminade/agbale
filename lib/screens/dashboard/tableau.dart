@@ -1,8 +1,9 @@
+import 'package:abgbale/models/user.dart';
+import 'package:abgbale/screens/mynets/mynets_screen.dart';
 import 'package:abgbale/screens/contacts/add_edit_contact_screen.dart';
 import 'package:abgbale/models/contact.dart';
 import 'package:abgbale/screens/notes/add_edit_note_todo_screen.dart';
 import 'package:abgbale/models/note_todo.dart';
-import 'package:abgbale/models/user.dart';
 import 'package:abgbale/screens/auth/login.dart';
 import 'package:abgbale/screens/contacts/add_edit_contact_screen.dart';
 import 'package:abgbale/screens/contacts/contacts_screen.dart';
@@ -112,6 +113,7 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
       _buildDashboardHome(),
       const ContactsScreen(),
       const NotesTodosScreen(),
+      const MyNetsScreen(),
     ];
     return widgetOptions.elementAt(_selectedIndex);
   }
