@@ -17,8 +17,8 @@ class BottomNavBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primary, // Navbar background is primary color (blue)
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(25.0),
-          topRight: Radius.circular(25.0),
+          topLeft: Radius.circular(15.0),
+          topRight: Radius.circular(15.0),
         ),
         boxShadow: [
           BoxShadow(
