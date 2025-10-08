@@ -40,4 +40,24 @@ class Contact {
       'date_ajout': dateAdded.toIso8601String(),
     };
   }
+
+  Contact copyWith({
+    int? id,
+    int? userId,
+    String? contactName,
+    String? number,
+    String? email,
+    String? importanceNote,
+    DateTime? dateAdded,
+  }) {
+    return Contact(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      contactName: contactName ?? this.contactName,
+      number: number ?? this.number,
+      email: email ?? this.email,
+      importanceNote: importanceNote ?? this.importanceNote,
+      dateAdded: dateAdded ?? this.dateAdded,
+    );
+  }
 }

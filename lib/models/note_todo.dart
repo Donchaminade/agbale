@@ -44,4 +44,26 @@ class NoteTodo {
       'date_echeance': dueDate?.toIso8601String(),
     };
   }
+
+  NoteTodo copyWith({
+    int? id,
+    int? userId,
+    String? title,
+    String? content,
+    String? type,
+    String? status,
+    DateTime? creationDate,
+    DateTime? dueDate,
+  }) {
+    return NoteTodo(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      type: type ?? this.type,
+      status: status ?? this.status,
+      creationDate: creationDate ?? this.creationDate,
+      dueDate: dueDate ?? this.dueDate,
+    );
+  }
 }

@@ -1,8 +1,8 @@
+import 'package:abgbale/models/note_todo.dart';
+import 'package:abgbale/services/api_service.dart';
 import 'package:abgbale/utils/token_manager.dart';
 import 'package:abgbale/widgets/full_screen_loader.dart';
 import 'package:flutter/material.dart';
-import 'package:abgbale/models/note_todo.dart';
-import 'package:abgbale/services/api_service.dart';
 import 'package:intl/intl.dart';
 
 class AddEditNoteTodoScreen extends StatefulWidget {
@@ -16,9 +16,10 @@ class AddEditNoteTodoScreen extends StatefulWidget {
 
 class _AddEditNoteTodoScreenState extends State<AddEditNoteTodoScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ApiService _apiService = ApiService();
-  late TextEditingController _titleController;
-  late TextEditingController _contentController;
+  final _apiService = ApiService();
+
+  late final TextEditingController _titleController;
+  late final TextEditingController _contentController;
   String _selectedType = 'note';
   String _selectedStatus = 'en_attente';
   DateTime? _selectedDueDate;
@@ -44,28 +45,33 @@ class _AddEditNoteTodoScreenState extends State<AddEditNoteTodoScreen> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDueDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
+      firstDate: DateTime.now(),
       lastDate: DateTime(2101),
     );
     if (picked != null && picked != _selectedDueDate) {
-      setState(() {
-        _selectedDueDate = picked;
-      });
+      setState(() => _selectedDueDate = picked);
     }
   }
 
   Future<void> _saveNoteTodo() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
+    FocusScope.of(context).unfocus();
 
-      final userId = await TokenManager.getUserId() ?? 0; // Get userId from TokenManager
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-      final noteTodo = NoteTodo(
+    setState(() => _isLoading = true);
+
+    try {
+      final userId = await TokenManager.getUserId();
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final noteTodoData = NoteTodo(
         id: widget.noteTodo?.id ?? 0,
         userId: userId,
         title: _titleController.text,
@@ -76,39 +82,39 @@ class _AddEditNoteTodoScreenState extends State<AddEditNoteTodoScreen> {
         dueDate: _selectedDueDate,
       );
 
-      try {
-        bool success = false;
-        if (_isEditing) {
-          success = await _apiService.updateNoteTodo(noteTodo);
-        } else {
-          final newNoteTodo = await _apiService.createNoteTodo(noteTodo, userId);
-          success = newNoteTodo != null;
-        }
+      final bool success;
+      if (_isEditing) {
+        success = await _apiService.updateNoteTodo(noteTodoData);
+      } else {
+        final newNoteTodo = await _apiService.createNoteTodo(noteTodoData);
+        success = newNoteTodo != null;
+      }
 
-        if (mounted) {
-          if (success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Note/Todo ${ _isEditing ? 'updated' : 'saved' } successfully!'), backgroundColor: Colors.green),
-            );
-            Navigator.of(context).pop(true); // Return true to indicate success
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to ${ _isEditing ? 'update' : 'save' } note/todo.'), backgroundColor: Colors.red),
-            );
-          }
-        }
-      } catch (e) {
-        if (mounted) {
+      if (mounted) {
+        if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('An error occurred: $e'), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text('Note/Todo ${ _isEditing ? 'updated' : 'saved' } successfully!'),
+              backgroundColor: Colors.green,
+            ),
           );
+          Navigator.of(context).pop(true);
+        } else {
+          throw Exception('Failed to save Note/Todo.');
         }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('An error occurred: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -121,95 +127,120 @@ class _AddEditNoteTodoScreenState extends State<AddEditNoteTodoScreen> {
         appBar: AppBar(
           title: Text(_isEditing ? 'Edit Note/Todo' : 'Add Note/Todo'),
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(24.0),
-          children: [
-            const SizedBox(height: 24),
-            Center(
-              child: Icon(
-                _selectedType == 'todo' ? Icons.check_box_outlined : Icons.note_alt_outlined,
-                size: 80,
-                color: Theme.of(context).colorScheme.primary,
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16.0),
+            children: [
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _titleController,
+                labelText: 'Title',
+                icon: Icons.title,
+                validator: (value) => (value == null || value.isEmpty) ? 'Please enter a title' : null,
               ),
-            ),
-            const SizedBox(height: 32),
-            Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _contentController,
+                labelText: 'Content (Optional)',
+                icon: Icons.description,
+                maxLines: 4,
+              ),
+              const SizedBox(height: 16),
+              Row(
                 children: [
-                  TextFormField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(labelText: 'Title', prefixIcon: Icon(Icons.title)),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a title';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _contentController,
-                    decoration: const InputDecoration(labelText: 'Content (Optional)', prefixIcon: Icon(Icons.description)),
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 20),
-                  DropdownButtonFormField<String>(
-                    value: _selectedType,
-                    decoration: const InputDecoration(labelText: 'Type', prefixIcon: Icon(Icons.category)),
-                    items: const [
-                      DropdownMenuItem(value: 'note', child: Text('Note')),
-                      DropdownMenuItem(value: 'todo', child: Text('Todo')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _selectedType = value;
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  DropdownButtonFormField<String>(
-                    value: _selectedStatus,
-                    decoration: const InputDecoration(labelText: 'Status', prefixIcon: Icon(Icons.info_outline)),
-                    items: const [
-                      DropdownMenuItem(value: 'en_attente', child: Text('En attente')),
-                      DropdownMenuItem(value: 'en_cours', child: Text('En cours')),
-                      DropdownMenuItem(value: 'terminé', child: Text('Terminé')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _selectedStatus = value;
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  ListTile(
-                    leading: const Icon(Icons.calendar_today),
-                    title: Text(_selectedDueDate == null
-                        ? 'Select Due Date (Optional)'
-                        : 'Due Date: ${DateFormat('yyyy-MM-dd').format(_selectedDueDate!)}'),
-                    trailing: const Icon(Icons.edit_calendar),
-                    onTap: () => _selectDate(context),
-                  ),
-                  const SizedBox(height: 40),
-                  ElevatedButton(
-                    onPressed: _saveNoteTodo,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedType,
+                      decoration: InputDecoration(
+                        labelText: 'Type',
+                        prefixIcon: const Icon(Icons.category_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'note', child: Text('Note')),
+                        DropdownMenuItem(value: 'todo', child: Text('Todo')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _selectedType = value);
+                        }
+                      },
                     ),
-                    child: Text(_isEditing ? 'Update Note/Todo' : 'Save Note/Todo'),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: _selectedStatus,
+                      decoration: InputDecoration(
+                        labelText: 'Status',
+                        prefixIcon: const Icon(Icons.task_alt_outlined),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'en_attente', child: Text('Pending')),
+                        DropdownMenuItem(value: 'en_cours', child: Text('In Progress')),
+                        DropdownMenuItem(value: 'terminé', child: Text('Completed')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _selectedStatus = value);
+                        }
+                      },
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
+                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+                child: ListTile(
+                  leading: const Icon(Icons.calendar_today_outlined),
+                  title: Text(
+                    _selectedDueDate == null
+                        ? 'Select Due Date (Optional)'
+                        : 'Due: ${DateFormat.yMMMd().format(_selectedDueDate!)}',
+                  ),
+                  trailing: const Icon(Icons.edit_calendar_outlined),
+                  onTap: () => _selectDate(context),
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _saveNoteTodo,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(_isEditing ? 'Update Note/Todo' : 'Save Note/Todo'),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    required IconData icon,
+    int? maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: labelText,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      validator: validator,
     );
   }
 }

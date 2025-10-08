@@ -1,7 +1,8 @@
-import 'package:abgbale/widgets/full_screen_loader.dart';
-import 'package:flutter/material.dart';
 import 'package:abgbale/models/contact.dart';
 import 'package:abgbale/services/api_service.dart';
+import 'package:abgbale/utils/token_manager.dart';
+import 'package:abgbale/widgets/full_screen_loader.dart';
+import 'package:flutter/material.dart';
 
 class AddEditContactScreen extends StatefulWidget {
   final Contact? contact;
@@ -14,10 +15,11 @@ class AddEditContactScreen extends StatefulWidget {
 
 class _AddEditContactScreenState extends State<AddEditContactScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ApiService _apiService = ApiService();
-  late TextEditingController _nameController;
-  late TextEditingController _numberController;
-  late TextEditingController _emailController;
+  final _apiService = ApiService();
+
+  late final TextEditingController _nameController;
+  late final TextEditingController _numberController;
+  late final TextEditingController _emailController;
   String _selectedImportance = 'moyenne';
   bool _isLoading = false;
 
@@ -41,14 +43,23 @@ class _AddEditContactScreenState extends State<AddEditContactScreen> {
   }
 
   Future<void> _saveContact() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
+    FocusScope.of(context).unfocus();
 
-      final contact = Contact(
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final userId = await TokenManager.getUserId();
+      if (userId == null) {
+        throw Exception('User not authenticated');
+      }
+
+      final contactData = Contact(
         id: widget.contact?.id ?? 0,
-        userId: widget.contact?.userId ?? 0,
+        userId: userId,
         contactName: _nameController.text,
         number: _numberController.text.isNotEmpty ? _numberController.text : null,
         email: _emailController.text.isNotEmpty ? _emailController.text : null,
@@ -56,39 +67,39 @@ class _AddEditContactScreenState extends State<AddEditContactScreen> {
         dateAdded: widget.contact?.dateAdded ?? DateTime.now(),
       );
 
-      try {
-        bool success = false;
-        if (_isEditing) {
-          success = await _apiService.updateContact(contact);
-        } else {
-          final newContact = await _apiService.createContact(contact);
-          success = newContact != null;
-        }
+      final bool success;
+      if (_isEditing) {
+        success = await _apiService.updateContact(contactData);
+      } else {
+        final newContact = await _apiService.createContact(contactData);
+        success = newContact != null;
+      }
 
-        if (mounted) {
-          if (success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Contact ${ _isEditing ? 'updated' : 'saved' } successfully!'), backgroundColor: Colors.green),
-            );
-            Navigator.of(context).pop(true); // Return true to indicate success
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to ${ _isEditing ? 'update' : 'save' } contact.'), backgroundColor: Colors.red),
-            );
-          }
-        }
-      } catch (e) {
-        if (mounted) {
+      if (mounted) {
+        if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('An error occurred: $e'), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text('Contact ${ _isEditing ? 'updated' : 'saved' } successfully!'),
+              backgroundColor: Colors.green,
+            ),
           );
+          Navigator.of(context).pop(true);
+        } else {
+          throw Exception('Failed to save contact.');
         }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('An error occurred: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -101,75 +112,85 @@ class _AddEditContactScreenState extends State<AddEditContactScreen> {
         appBar: AppBar(
           title: Text(_isEditing ? 'Edit Contact' : 'Add Contact'),
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(24.0),
-          children: [
-            const SizedBox(height: 24),
-            Center(
-              child: CircleAvatar(
-                radius: 50,
-                child: Icon(Icons.person, size: 50),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(16.0),
+            children: [
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _nameController,
+                labelText: 'Contact Name',
+                icon: Icons.person_outline,
+                validator: (value) => (value == null || value.isEmpty) ? 'Please enter a name' : null,
               ),
-            ),
-            const SizedBox(height: 32),
-            Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Contact Name', prefixIcon: Icon(Icons.person_outline)),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a contact name';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _numberController,
-                    decoration: const InputDecoration(labelText: 'Phone Number', prefixIcon: Icon(Icons.phone_outlined)),
-                    keyboardType: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 20),
-                  DropdownButtonFormField<String>(
-                    value: _selectedImportance,
-                    decoration: const InputDecoration(labelText: 'Importance', prefixIcon: Icon(Icons.star_outline)),
-                    items: const [
-                      DropdownMenuItem(value: 'faible', child: Text('Faible')),
-                      DropdownMenuItem(value: 'moyenne', child: Text('Moyenne')),
-                      DropdownMenuItem(value: 'élevée', child: Text('Élevée')),
-                    ],
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          _selectedImportance = value;
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 40),
-                  ElevatedButton(
-                    onPressed: _saveContact,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: Text(_isEditing ? 'Update Contact' : 'Save Contact'),
-                  ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _numberController,
+                labelText: 'Phone Number (Optional)',
+                icon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _emailController,
+                labelText: 'Email (Optional)',
+                icon: Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedImportance,
+                decoration: InputDecoration(
+                  labelText: 'Importance',
+                  prefixIcon: const Icon(Icons.star_outline),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'faible', child: Text('Low')),
+                  DropdownMenuItem(value: 'moyenne', child: Text('Medium')),
+                  DropdownMenuItem(value: 'élevée', child: Text('High')),
                 ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selectedImportance = value);
+                  }
+                },
               ),
-            ),
-          ],
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _saveContact,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(_isEditing ? 'Update Contact' : 'Save Contact'),
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    required IconData icon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: labelText,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      keyboardType: keyboardType,
+      validator: validator,
     );
   }
 }

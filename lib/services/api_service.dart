@@ -188,8 +188,6 @@ class ApiService {
     if (cookie == null) return null;
 
     final requestBody = jsonEncode(contact.toJson());
-    print('Create Contact Body: $requestBody'); // Debug print
-
     final response = await http.post(
       Uri.parse('$_baseUrl/contacts'),
       headers: <String, String>{
@@ -199,24 +197,12 @@ class ApiService {
       body: requestBody,
     );
 
-    print('Create Contact Response: ${response.statusCode} ${response.body}'); // Debug print
-
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       try {
         final cleanJson = _extractJson(response.body);
         final Map<String, dynamic> responseBody = jsonDecode(cleanJson);
         if (responseBody['success'] && responseBody['id_contact'] != null) {
-          // For simplicity, we'll return a dummy contact with the new ID
-          // In a real app, you might refetch or get more details from the API response
-          return Contact(
-            id: responseBody['id_contact'],
-            userId: await TokenManager.getUserId() ?? 0,
-            contactName: contact.contactName,
-            importanceNote: contact.importanceNote,
-            dateAdded: DateTime.now(),
-            email: contact.email,
-            number: contact.number,
-          );
+          return contact.copyWith(id: responseBody['id_contact']);
         }
       } catch (e) {
         print('Error decoding JSON for createContact: $e');
@@ -513,7 +499,7 @@ class ApiService {
     return [];
   }
 
-  Future<NoteTodo?> createNoteTodo(NoteTodo noteTodo, int userId) async {
+  Future<NoteTodo?> createNoteTodo(NoteTodo noteTodo) async {
     final String? cookie = await TokenManager.getToken();
     if (cookie == null) return null;
 
@@ -526,21 +512,16 @@ class ApiService {
       body: jsonEncode(noteTodo.toJson()),
     );
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> responseBody = jsonDecode(response.body);
-      if (responseBody['success'] && responseBody['id_note'] != null) {
-        return NoteTodo(
-          id: responseBody['id_note'],
-          userId:
-              await TokenManager.getUserId() ??
-              0, // Get userId from TokenManager
-          title: noteTodo.title,
-          type: noteTodo.type,
-          status: noteTodo.status,
-          creationDate: DateTime.now(),
-          content: noteTodo.content,
-          dueDate: noteTodo.dueDate,
-        );
+    if (response.statusCode == 201) {
+      try {
+        final cleanJson = _extractJson(response.body);
+        final Map<String, dynamic> responseBody = jsonDecode(cleanJson);
+        if (responseBody['success'] && responseBody['id_note'] != null) {
+          return noteTodo.copyWith(id: responseBody['id_note']);
+        }
+      } catch (e) {
+        print('Error decoding JSON for createNoteTodo: $e');
+        return null;
       }
     }
     return null;
