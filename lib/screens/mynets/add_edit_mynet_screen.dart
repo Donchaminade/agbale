@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:abgbale/models/mynet.dart';
 import 'package:abgbale/services/api_service.dart';
 import 'package:abgbale/utils/token_manager.dart';
@@ -47,18 +48,13 @@ class _AddEditMyNetScreenState extends State<AddEditMyNetScreen> {
 
   Future<void> _saveMyNet() async {
     FocusScope.of(context).unfocus();
-
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
       final userId = await TokenManager.getUserId();
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
+      if (userId == null) throw Exception('User not authenticated');
 
       final myNetData = MyNet(
         id: widget.myNet?.id ?? 0,
@@ -70,21 +66,14 @@ class _AddEditMyNetScreenState extends State<AddEditMyNetScreen> {
         creationDate: widget.myNet?.creationDate ?? DateTime.now(),
       );
 
-      final bool success;
-      if (_isEditing) {
-        success = await _apiService.updateMyNet(myNetData);
-      } else {
-        final newMyNet = await _apiService.createMyNet(myNetData);
-        success = newMyNet != null;
-      }
+      final success = _isEditing
+          ? await _apiService.updateMyNet(myNetData)
+          : (await _apiService.createMyNet(myNetData)) != null;
 
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('MyNet entry ${ _isEditing ? 'updated' : 'saved' } successfully!'),
-              backgroundColor: Colors.green,
-            ),
+            SnackBar(content: Text('MyNet entry ${ _isEditing ? 'updated' : 'saved' } successfully!'), backgroundColor: Colors.green),
           );
           Navigator.of(context).pop(true);
         } else {
@@ -109,102 +98,126 @@ class _AddEditMyNetScreenState extends State<AddEditMyNetScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryBlue = Color(0xFF2196F3); // Define the new primary blue color
+
     return FullScreenLoader(
       isLoading: _isLoading,
       child: Scaffold(
+        backgroundColor: Colors.black,
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
           title: Text(_isEditing ? 'Edit MyNet' : 'Add MyNet'),
         ),
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16.0),
-            children: [
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: _siteNameController,
-                labelText: 'Site or App Name',
-                icon: Icons.language,
-                validator: (value) => (value == null || value.isEmpty) ? 'Please enter a name' : null,
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: _usernameController,
-                labelText: 'Username',
-                icon: Icons.person_outline,
-                validator: (value) => (value == null || value.isEmpty) ? 'Please enter a username' : null,
-              ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: _emailOrNumberController,
-                labelText: 'Associated Email/Number (Optional)',
-                icon: Icons.alternate_email,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-              _buildPasswordField(),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _saveMyNet,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+        body: Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/onboarding1.png'), // Choose a suitable background
+                  fit: BoxFit.cover,
                 ),
-                child: Text(_isEditing ? 'Update Entry' : 'Save Entry'),
               ),
-            ],
-          ),
+            ),
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+              child: Container(
+                color: Colors.black.withOpacity(0.2),
+              ),
+            ),
+            SafeArea(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  children: [
+                    const SizedBox(height: 40),
+                    Icon(Icons.security_outlined, color: Colors.white.withOpacity(0.8), size: 60),
+                    const SizedBox(height: 40),
+                    TextFormField(
+                      controller: _siteNameController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _buildInputDecoration(labelText: 'Site or App Name', icon: Icons.language),
+                      validator: (value) => (value == null || value.isEmpty) ? 'Please enter a name' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _usernameController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _buildInputDecoration(labelText: 'Username', icon: Icons.person_outline),
+                      validator: (value) => (value == null || value.isEmpty) ? 'Please enter a username' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _emailOrNumberController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _buildInputDecoration(labelText: 'Associated Email/Number (Optional)', icon: Icons.alternate_email),
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _isPasswordObscured,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _buildInputDecoration(
+                        labelText: 'Password',
+                        icon: Icons.lock_outline,
+                      ).copyWith(
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _isPasswordObscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            color: Colors.white.withOpacity(0.7),
+                          ),
+                          onPressed: () => setState(() => _isPasswordObscured = !_isPasswordObscured),
+                        ),
+                      ),
+                      validator: (value) => (value == null || value.isEmpty) ? 'Please enter a password' : null,
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton(
+                      onPressed: _saveMyNet,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(_isEditing ? 'Update Entry' : 'Save Entry'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String labelText,
-    required IconData icon,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: labelText,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+  InputDecoration _buildInputDecoration({required String labelText, required IconData icon}) {
+    return InputDecoration(
+      labelText: labelText,
+      labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+      prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.7)),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.1),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
       ),
-      keyboardType: keyboardType,
-      validator: validator,
-    );
-  }
-
-  Widget _buildPasswordField() {
-    return TextFormField(
-      controller: _passwordController,
-      obscureText: _isPasswordObscured,
-      decoration: InputDecoration(
-        labelText: 'Password',
-        prefixIcon: const Icon(Icons.lock_outline),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        suffixIcon: IconButton(
-          icon: Icon(
-            _isPasswordObscured ? Icons.visibility_off : Icons.visibility,
-          ),
-          onPressed: () {
-            setState(() {
-              _isPasswordObscured = !_isPasswordObscured;
-            });
-          },
-        ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.white),
       ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter a password';
-        }
-        return null;
-      },
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.redAccent),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+      ),
     );
   }
 }

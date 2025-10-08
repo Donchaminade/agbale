@@ -1,18 +1,16 @@
+import 'dart:ui';
 import 'package:abgbale/models/user.dart';
-import 'package:abgbale/screens/mynets/mynets_screen.dart';
-import 'package:abgbale/screens/contacts/add_edit_contact_screen.dart';
-import 'package:abgbale/models/contact.dart';
-import 'package:abgbale/screens/notes/add_edit_note_todo_screen.dart';
-import 'package:abgbale/models/note_todo.dart';
-import 'package:abgbale/screens/auth/login.dart';
 import 'package:abgbale/screens/contacts/add_edit_contact_screen.dart';
 import 'package:abgbale/screens/contacts/contacts_screen.dart';
+import 'package:abgbale/screens/mynets/mynets_screen.dart';
 import 'package:abgbale/screens/navbar/bottomnavbar.dart';
+import 'package:abgbale/screens/notes/add_edit_note_todo_screen.dart';
 import 'package:abgbale/screens/notes/notes_todos_screen.dart';
 import 'package:abgbale/screens/profile/my_info_screen.dart';
 import 'package:abgbale/screens/profile/profile_screen.dart';
 import 'package:abgbale/services/api_service.dart';
 import 'package:flutter/material.dart';
+import 'package:abgbale/screens/auth/login.dart'; // Import LoginScreen
 
 class TableauScreen extends StatefulWidget {
   const TableauScreen({super.key});
@@ -21,7 +19,8 @@ class TableauScreen extends StatefulWidget {
   State<TableauScreen> createState() => _TableauScreenState();
 }
 
-class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserver {
+class _TableauScreenState extends State<TableauScreen>
+    with WidgetsBindingObserver {
   final ApiService _apiService = ApiService();
   Future<Map<String, dynamic>>? _dashboardFuture;
 
@@ -71,11 +70,15 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
   }
 
   void _navigateToProfile() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) => const ProfileScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const ProfileScreen()));
   }
 
   void _navigateToMyInfo() {
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) => const MyInfoScreen()));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const MyInfoScreen()));
   }
 
   Future<void> _quickAddContact() async {
@@ -88,7 +91,10 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
         _loadData(); // Refresh dashboard stats
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contact added successfully!'), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text('Contact added successfully!'),
+          backgroundColor: Colors.green,
+        ),
       );
     }
   }
@@ -103,7 +109,10 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
         _loadData(); // Refresh dashboard stats
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Note/Todo added successfully!'), backgroundColor: Colors.green),
+        const SnackBar(
+          content: Text('Note/Todo added successfully!'),
+          backgroundColor: Colors.green,
+        ),
       );
     }
   }
@@ -119,25 +128,34 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
   }
 
   Widget _buildDashboardHome() {
+    const Color primaryBlue = Color(
+      0xFF2196F3,
+    ); // Define the new primary blue color
+
     return FutureBuilder<Map<String, dynamic>>(
       future: _dashboardFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          );
         }
         if (snapshot.hasError || !snapshot.hasData) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Could not load dashboard data.'),
+                const Text(
+                  'Could not load dashboard data.',
+                  style: TextStyle(color: Colors.white),
+                ),
                 const SizedBox(height: 8),
                 ElevatedButton(
                   onPressed: () => setState(() {
                     _loadData();
                   }),
                   child: const Text('Retry'),
-                )
+                ),
               ],
             ),
           );
@@ -155,9 +173,12 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
           child: CustomScrollView(
             slivers: [
               SliverAppBar(
+                stretch: true,
                 expandedHeight: 250.0,
-                floating: true,
+                floating: false,
                 pinned: true,
+                backgroundColor: Colors.transparent,
+                elevation: 0,
                 flexibleSpace: FlexibleSpaceBar(
                   centerTitle: false,
                   titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
@@ -167,79 +188,149 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
                     children: [
                       Text(
                         'Welcome, ${user.fullName}!',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         user.email,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(color: Colors.white70),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                  background: Image.asset(
-                    'assets/onboarding2.png',
-                    fit: BoxFit.cover,
-                    colorBlendMode: BlendMode.darken,
-                    color: Colors.black.withOpacity(0.4),
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset('assets/onboarding2.png', fit: BoxFit.cover),
+                      BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
+                        child: Container(color: Colors.black.withOpacity(0.3)),
+                      ),
+                    ],
                   ),
                 ),
-                actions: [
-                  // Removed search icon and profile menu as per user request
-                ],
               ),
               SliverPadding(
                 padding: const EdgeInsets.all(16.0),
                 sliver: SliverList(
-                  delegate: SliverChildListDelegate(
-                    [
-                      GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        children: [
-                          _buildExpertStatCard(context, 'Total Contacts', stats['totalContacts'].toString(), Icons.people_alt, Colors.blue),
-                          _buildExpertStatCard(context, 'Active Notes', stats['activeNotes'].toString(), Icons.note_alt, Colors.green),
-                          _buildExpertStatCard(context, 'Social Engagements', '5', Icons.share, Colors.orange), // Still hardcoded
-                          _buildExpertStatCard(context, 'Pending Tasks', stats['pendingTodos'].toString(), Icons.task, Colors.red),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Quick Actions',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 16),
-                      GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
+                  delegate: SliverChildListDelegate([
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
                       children: [
-                        _buildQuickActionButton(context, 'Add Contact', Icons.person_add, _quickAddContact),
-                        _buildQuickActionButton(context, 'New Note', Icons.note_add, _quickAddNote),
-                        _buildQuickActionButton(context, 'View All', Icons.list_alt, () {
-                          // Navigate to a screen showing all items
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('View All - To be implemented')),
-                          );
-                        }),
+                        _buildExpertStatCard(
+                          context,
+                          'Total Contacts',
+                          stats['totalContacts'].toString(),
+                          Icons.people_alt,
+                          primaryBlue,
+                        ),
+                        _buildExpertStatCard(
+                          context,
+                          'Active Notes',
+                          stats['activeNotes'].toString(),
+                          Icons.note_alt,
+                          primaryBlue,
+                        ),
+                        _buildExpertStatCard(
+                          context,
+                          'Total MyNets',
+                          stats['totalMynets'].toString(),
+                          Icons.vpn_key,
+                          primaryBlue,
+                        ),
+                        _buildExpertStatCard(
+                          context,
+                          'Pending Tasks',
+                          stats['pendingTodos'].toString(),
+                          Icons.task,
+                          primaryBlue,
+                        ),
                       ],
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Recent Activity',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildActivityItem(context, 'New contact added: John Doe', '2 hours ago', Icons.person_add),
-                      _buildActivityItem(context, 'Note "Project Alpha" updated', 'yesterday', Icons.edit_note),
-                      _buildActivityItem(context, 'Shared post on Facebook', '3 days ago', Icons.facebook),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Quick Actions',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      children: [
+                        _buildQuickActionButton(
+                          context,
+                          'Add Contact',
+                          Icons.person_add,
+                          _quickAddContact,
+                          primaryBlue,
+                        ),
+                        _buildQuickActionButton(
+                          context,
+                          'New Note',
+                          Icons.note_add,
+                          _quickAddNote,
+                          primaryBlue,
+                        ),
+                        _buildQuickActionButton(
+                          context,
+                          'View All',
+                          Icons.list_alt,
+                          () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('View All - To be implemented'),
+                              ),
+                            );
+                          },
+                          primaryBlue,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Recent Activity',
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildActivityItem(
+                      context,
+                      'New contact added: John Doe',
+                      '2 hours ago',
+                      Icons.person_add,
+                    ),
+                    _buildActivityItem(
+                      context,
+                      'Note "Project Alpha" updated',
+                      'yesterday',
+                      Icons.edit_note,
+                    ),
+                    _buildActivityItem(
+                      context,
+                      'Shared post on Facebook',
+                      '3 days ago',
+                      Icons.facebook,
+                    ),
+                  ]),
                 ),
               ),
             ],
@@ -249,59 +340,91 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildExpertStatCard(BuildContext context, String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [color.withOpacity(0.8), color],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+  Widget _buildGlassmorphicContainer({
+    required Widget child,
+    double borderRadius = 16,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
           ),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(icon, size: 36, color: Colors.white),
-              const SizedBox(height: 8),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.white70),
-              ),
-            ],
-          ),
+          child: child,
         ),
       ),
     );
   }
 
-  Widget _buildActivityItem(BuildContext context, String activity, String time, IconData icon) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+  Widget _buildExpertStatCard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return _buildGlassmorphicContainer(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(icon, size: 36, color: Colors.white.withOpacity(0.9)),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(color: Colors.white70),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityItem(
+    BuildContext context,
+    String activity,
+    String time,
+    IconData icon,
+  ) {
+    return _buildGlassmorphicContainer(
+      borderRadius: 8,
       child: Padding(
         padding: const EdgeInsets.all(12.0),
         child: Row(
           children: [
-            Icon(icon, color: Theme.of(context).colorScheme.primary),
+            Icon(icon, color: Colors.white70),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(activity, style: Theme.of(context).textTheme.bodyLarge),
-                  Text(time, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                  Text(
+                    activity,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge?.copyWith(color: Colors.white),
+                  ),
+                  Text(
+                    time,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                  ),
                 ],
               ),
             ),
@@ -311,11 +434,15 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
     );
   }
 
-  Widget _buildQuickActionButton(BuildContext context, String title, IconData icon, VoidCallback onPressed) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      clipBehavior: Clip.antiAlias,
+  Widget _buildQuickActionButton(
+    BuildContext context,
+    String title,
+    IconData icon,
+    VoidCallback onPressed,
+    Color color,
+  ) {
+    return _buildGlassmorphicContainer(
+      borderRadius: 12,
       child: InkWell(
         onTap: onPressed,
         child: Padding(
@@ -323,12 +450,14 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
+              Icon(icon, size: 32, color: Colors.white),
               const SizedBox(height: 8),
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.white70),
               ),
             ],
           ),
@@ -339,10 +468,20 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryBlue = Color(
+      0xFF2196F3,
+    ); // Define the new primary blue color
+
     return Scaffold(
+      backgroundColor:
+          Colors.black, // Dark background for better glassmorphism effect
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: CircleAvatar(
-          backgroundColor: Colors.white,
+          backgroundColor: Colors.white.withOpacity(0.1),
+          radius: 20,
           child: Padding(
             padding: const EdgeInsets.all(4.0),
             child: Image.asset('assets/logo.png', height: 30),
@@ -355,10 +494,14 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
               if (!snapshot.hasData) {
                 return const CircleAvatar(
                   radius: 20,
+                  backgroundColor: Colors.white10,
                   child: SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white70,
+                    ),
                   ),
                 );
               }
@@ -377,30 +520,41 @@ class _TableauScreenState extends State<TableauScreen> with WidgetsBindingObserv
                   const PopupMenuItem<String>(
                     value: 'profile',
                     child: ListTile(
-                      leading: Icon(Icons.person),
-                      title: Text('Profil'),
+                      leading: Icon(Icons.person, color: Colors.black87),
+                      title: Text(
+                        'Profil',
+                        style: TextStyle(color: Colors.black87),
+                      ),
                     ),
                   ),
                   const PopupMenuItem<String>(
                     value: 'my_info',
                     child: ListTile(
-                      leading: Icon(Icons.info),
-                      title: Text('Mes infos'),
+                      leading: Icon(Icons.info, color: Colors.black87),
+                      title: Text(
+                        'Mes infos',
+                        style: TextStyle(color: Colors.black87),
+                      ),
                     ),
                   ),
                   const PopupMenuItem<String>(
                     value: 'logout',
                     child: ListTile(
-                      leading: Icon(Icons.logout),
-                      title: Text('Déconnexion'),
+                      leading: Icon(Icons.logout, color: Colors.black87),
+                      title: Text(
+                        'Déconnexion',
+                        style: TextStyle(color: Colors.black87),
+                      ),
                     ),
                   ),
                 ],
                 child: CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                  backgroundColor: primaryBlue,
                   child: Text(
-                    user.fullName.isNotEmpty ? user.fullName.substring(0, 1).toUpperCase() : 'U',
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSecondaryContainer),
+                    user.fullName.isNotEmpty
+                        ? user.fullName.substring(0, 1).toUpperCase()
+                        : 'U',
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
               );

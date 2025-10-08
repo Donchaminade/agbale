@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 class BottomNavBar extends StatelessWidget {
@@ -12,93 +14,70 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryColor = Color(0xFF2196F3); // Vibrant Blue
+
     return Container(
-      height: 60, // Slightly reduced height for a sleeker look
+      height: 70,
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary, // Navbar background is primary color (blue)
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(15.0),
-          topRight: Radius.circular(15.0),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            spreadRadius: 0,
-            blurRadius: 10,
-            offset: const Offset(0, -5), // Subtle shadow upwards
-          ),
-        ],
+        color: Colors.black.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(25.0),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(
-            context,
-            0,
-            Icons.dashboard_outlined,
-            'Dash',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(25.0),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(context, 0, Icons.dashboard_outlined, 'Dashboard', primaryColor),
+              _buildNavItem(context, 1, Icons.contacts_outlined, 'Contacts', primaryColor),
+              _buildNavItem(context, 2, Icons.note_alt_outlined, 'Notes', primaryColor),
+              _buildNavItem(context, 3, Icons.vpn_key_outlined, 'MyNets', primaryColor),
+            ],
           ),
-          _buildNavItem(
-            context,
-            1,
-            Icons.contacts_outlined,
-            'Contacts',
-          ),
-          _buildNavItem(
-            context,
-            2,
-            Icons.note_alt_outlined,
-            'Notes',
-          ),
-          _buildNavItem(
-            context,
-            3,
-            Icons.vpn_key_outlined,
-            'MyNets',
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildNavItem(BuildContext context, int index, IconData icon, String label) {
+  Widget _buildNavItem(BuildContext context, int index, IconData icon, String label, Color primaryColor) {
     final bool isSelected = index == selectedIndex;
-    final Color primaryColor = Theme.of(context).colorScheme.primary;
 
     return Expanded(
       child: InkWell(
         onTap: () => onItemTapped(index),
-        customBorder: const StadiumBorder(),
-        splashColor: primaryColor.withOpacity(0.2),
-        highlightColor: primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), // Reduced horizontal padding
+          margin: const EdgeInsets.all(6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(25),
+            color: isSelected ? primaryColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
           ),
-          child: Row(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 icon,
-                color: isSelected ? primaryColor : Colors.white.withOpacity(0.7),
-                size: 24,
+                color: isSelected ? Colors.white : Colors.white.withOpacity(0.7),
+                size: 22,
               ),
-              if (isSelected)
-                const SizedBox(width: 8),
-              if (isSelected)
+              if (isSelected) ...[
+                const SizedBox(height: 4),
                 Text(
                   label,
-                  style: TextStyle(
-                    color: primaryColor,
-                    fontSize: 11, // Reduced font size
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
+              ]
             ],
           ),
         ),

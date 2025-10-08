@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:abgbale/models/note_todo.dart';
 import 'package:abgbale/services/api_service.dart';
 import 'package:abgbale/utils/token_manager.dart';
@@ -58,18 +59,13 @@ class _AddEditNoteTodoScreenState extends State<AddEditNoteTodoScreen> {
 
   Future<void> _saveNoteTodo() async {
     FocusScope.of(context).unfocus();
-
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
       final userId = await TokenManager.getUserId();
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
+      if (userId == null) throw Exception('User not authenticated');
 
       final noteTodoData = NoteTodo(
         id: widget.noteTodo?.id ?? 0,
@@ -77,26 +73,19 @@ class _AddEditNoteTodoScreenState extends State<AddEditNoteTodoScreen> {
         title: _titleController.text,
         content: _contentController.text.isNotEmpty ? _contentController.text : null,
         type: _selectedType,
-        status: _selectedStatus,
+        status: _selectedType == 'note' ? 'en_attente' : _selectedStatus,
         creationDate: widget.noteTodo?.creationDate ?? DateTime.now(),
-        dueDate: _selectedDueDate,
+        dueDate: _selectedType == 'note' ? null : _selectedDueDate,
       );
 
-      final bool success;
-      if (_isEditing) {
-        success = await _apiService.updateNoteTodo(noteTodoData);
-      } else {
-        final newNoteTodo = await _apiService.createNoteTodo(noteTodoData);
-        success = newNoteTodo != null;
-      }
+      final success = _isEditing
+          ? await _apiService.updateNoteTodo(noteTodoData)
+          : (await _apiService.createNoteTodo(noteTodoData)) != null;
 
       if (mounted) {
         if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Note/Todo ${ _isEditing ? 'updated' : 'saved' } successfully!'),
-              backgroundColor: Colors.green,
-            ),
+            SnackBar(content: Text('Note/Todo ${ _isEditing ? 'updated' : 'saved' } successfully!'), backgroundColor: Colors.green),
           );
           Navigator.of(context).pop(true);
         } else {
@@ -121,126 +110,150 @@ class _AddEditNoteTodoScreenState extends State<AddEditNoteTodoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryBlue = Color(0xFF2196F3); // Define the new primary blue color
+
     return FullScreenLoader(
       isLoading: _isLoading,
       child: Scaffold(
+        backgroundColor: Colors.black,
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
           title: Text(_isEditing ? 'Edit Note/Todo' : 'Add Note/Todo'),
         ),
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16.0),
-            children: [
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: _titleController,
-                labelText: 'Title',
-                icon: Icons.title,
-                validator: (value) => (value == null || value.isEmpty) ? 'Please enter a title' : null,
+        body: Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/onboarding3.png'), // Replace with your background image
+                  fit: BoxFit.cover,
+                ),
               ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: _contentController,
-                labelText: 'Content (Optional)',
-                icon: Icons.description,
-                maxLines: 4,
+            ),
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+              child: Container(
+                color: Colors.black.withOpacity(0.2),
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
+            ),
+            SafeArea(
+              child: Form(
+                key: _formKey,
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  children: [
+                    const SizedBox(height: 40),
+                    Icon(Icons.note_alt_outlined, color: Colors.white.withOpacity(0.8), size: 60),
+                    const SizedBox(height: 40),
+                    TextFormField(
+                      controller: _titleController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _buildInputDecoration(labelText: 'Title', icon: Icons.title),
+                      validator: (value) => (value == null || value.isEmpty) ? 'Please enter a title' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _contentController,
+                      maxLines: 4,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: _buildInputDecoration(labelText: 'Content (Optional)', icon: Icons.description),
+                    ),
+                    const SizedBox(height: 20),
+                    DropdownButtonFormField<String>(
                       value: _selectedType,
-                      decoration: InputDecoration(
-                        labelText: 'Type',
-                        prefixIcon: const Icon(Icons.category_outlined),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
                       items: const [
                         DropdownMenuItem(value: 'note', child: Text('Note')),
                         DropdownMenuItem(value: 'todo', child: Text('Todo')),
                       ],
                       onChanged: (value) {
                         if (value != null) {
-                          setState(() => _selectedType = value);
+                          setState(() {
+                            _selectedType = value;
+                            if (_selectedType == 'note') {
+                              _selectedStatus = 'en_attente';
+                              _selectedDueDate = null;
+                            }
+                          });
                         }
                       },
+                      decoration: _buildInputDecoration(labelText: 'Type', icon: Icons.category_outlined),
+                      dropdownColor: Colors.grey[800],
+                      style: const TextStyle(color: Colors.white),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _selectedStatus,
-                      decoration: InputDecoration(
-                        labelText: 'Status',
-                        prefixIcon: const Icon(Icons.task_alt_outlined),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    if (_selectedType == 'todo') ...[
+                      const SizedBox(height: 20),
+                      DropdownButtonFormField<String>(
+                        value: _selectedStatus,
+                        items: const [
+                          DropdownMenuItem(value: 'en_attente', child: Text('Pending')),
+                          DropdownMenuItem(value: 'en_cours', child: Text('In Progress')),
+                          DropdownMenuItem(value: 'terminé', child: Text('Completed')),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) setState(() => _selectedStatus = value);
+                        },
+                        decoration: _buildInputDecoration(labelText: 'Status', icon: Icons.task_alt_outlined),
+                        dropdownColor: Colors.grey[800],
+                        style: const TextStyle(color: Colors.white),
                       ),
-                      items: const [
-                        DropdownMenuItem(value: 'en_attente', child: Text('Pending')),
-                        DropdownMenuItem(value: 'en_cours', child: Text('In Progress')),
-                        DropdownMenuItem(value: 'terminé', child: Text('Completed')),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() => _selectedStatus = value);
-                        }
-                      },
+                      const SizedBox(height: 20),
+                      ListTile(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        tileColor: Colors.white.withOpacity(0.1),
+                        leading: Icon(Icons.calendar_today_outlined, color: Colors.white.withOpacity(0.7)),
+                        title: Text(
+                          _selectedDueDate == null ? 'Select Due Date' : 'Due: ${DateFormat.yMMMd().format(_selectedDueDate!)}',
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        onTap: () => _selectDate(context),
+                      ),
+                    ],
+                    const SizedBox(height: 32),
+                    ElevatedButton(
+                      onPressed: _saveNoteTodo,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(_isEditing ? 'Update Note/Todo' : 'Save Note/Todo'),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
-                child: ListTile(
-                  leading: const Icon(Icons.calendar_today_outlined),
-                  title: Text(
-                    _selectedDueDate == null
-                        ? 'Select Due Date (Optional)'
-                        : 'Due: ${DateFormat.yMMMd().format(_selectedDueDate!)}',
-                  ),
-                  trailing: const Icon(Icons.edit_calendar_outlined),
-                  onTap: () => _selectDate(context),
+                  ],
                 ),
               ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _saveNoteTodo,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(_isEditing ? 'Update Note/Todo' : 'Save Note/Todo'),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String labelText,
-    required IconData icon,
-    int? maxLines = 1,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: labelText,
-        prefixIcon: Icon(icon),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+  InputDecoration _buildInputDecoration({required String labelText, required IconData icon}) {
+    return InputDecoration(
+      labelText: labelText,
+      labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+      prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.7)),
+      filled: true,
+      fillColor: Colors.white.withOpacity(0.1),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
       ),
-      validator: validator,
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.white),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.redAccent),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+      ),
     );
   }
 }

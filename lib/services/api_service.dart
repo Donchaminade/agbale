@@ -584,28 +584,36 @@ class ApiService {
   }
 
   Future<Map<String, int>> getDashboardStats() async {
-    // In a real-world scenario, the backend should provide a dedicated endpoint for this.
-    // Here, we simulate it by fetching all items and getting their length.
-    try {
-      final contacts = await fetchContacts();
-      final notes = await fetchNotesTodos();
+    final String? cookie = await TokenManager.getToken();
+    if (cookie == null) return {};
 
-      // You can add more stats here as needed
-      final pendingTodos = notes.where((item) => item.type == 'todo' && item.status != 'terminé').length;
+    final response = await http.get(
+      Uri.parse('$_baseUrl/dashboard'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Cookie': cookie,
+      },
+    );
 
-      return {
-        'totalContacts': contacts.length,
-        'activeNotes': notes.length,
-        'pendingTodos': pendingTodos,
-      };
-    } catch (e) {
-      print('Error fetching dashboard stats: $e');
-      return {
-        'totalContacts': 0,
-        'activeNotes': 0,
-        'pendingTodos': 0,
-      };
+    if (response.statusCode == 200) {
+      try {
+        final cleanJson = _extractJson(response.body);
+        final Map<String, dynamic> responseBody = jsonDecode(cleanJson);
+        if (responseBody['success'] == true && responseBody['stats'] != null) {
+          final Map<String, dynamic> statsData = responseBody['stats'];
+          return {
+            'totalContacts': statsData['totalContacts'] ?? 0,
+            'activeNotes': statsData['activeNotes'] ?? 0,
+            'pendingTodos': statsData['pendingTodos'] ?? 0,
+            'totalMynets': statsData['totalMynets'] ?? 0,
+          };
+        }
+      } catch (e) {
+        print('Error decoding JSON for getDashboardStats: $e');
+        return {};
+      }
     }
+    return {};
   }
 
   // Helper function to extract valid JSON from a malformed response
